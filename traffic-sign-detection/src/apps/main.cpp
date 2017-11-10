@@ -163,6 +163,7 @@ int main(int argc, char *argv[]) {
         translation_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
     }
 
+    /*
     // Correct the distortion
     std::vector< std::vector< cv::Point2f > > undistorted_contours;
     imageprocessing::correction_distortion(contours, undistorted_contours, translation_matrix, rotation_matrix, scaling_matrix);
@@ -172,10 +173,7 @@ int main(int argc, char *argv[]) {
     initopt::normalise_all_contours(undistorted_contours, normalised_contours, factor_vector);
     //std::vector< std::vector< cv::Point2f > > detected_signs_2f(normalised_contours.size());
     //std::vector< std::vector< cv::Point > > detected_signs(normalised_contours.size());
-
-    // std::vector< cv::Vec4i > hierarchy;
-    // cv::findContours(bin_image, contours, hierarchy,
-    //   CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+    */
 
     std::vector< cv::Point > approx;
     cv::Mat output_image = input_image.clone();
@@ -183,6 +181,14 @@ int main(int argc, char *argv[]) {
     for (unsigned int i = 0; i < contours.size(); i++){
       cv::approxPolyDP(cv::Mat(contours[i]), approx,
        cv::arcLength(cv::Mat(contours[i]), true) * 0.01, true);
+
+    	//Display points to terminal
+    	std::cout<<"Contour "<<i<<" Points:"<<std::endl;
+    	if(approx.size() <= 8){
+    		for(int i=0;i<approx.size(); i++){
+    			std::cout<<approx[i].x<<","<<approx[i].y<<std::endl;
+    		}
+    	}
 
       if (approx.size() == 8){
         std::cout << "STOP SIGN" << std::endl;
