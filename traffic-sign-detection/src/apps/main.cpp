@@ -142,18 +142,45 @@ int main(int argc, char *argv[]) {
 
 
     cv::imwrite("seg.jpg", bin_image);
-    cv::Canny(bin_image, bin_image, 200, 75);
-    cv::imwrite("Canny.jpg", bin_image);
 
-    std::vector< std::vector< cv::Point > > contours;
-    std::vector< cv::Vec4i > hierarchy;
-    cv::findContours(bin_image, contours, hierarchy,
-       CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+    /*
+   * Extract candidates (i.e., contours) and remove inconsistent candidates
+   */
+   std::vector< std::vector< cv::Point > > contours;
+   imageprocessing::contours_extraction(bin_image, contours);
+
+    /*
+   * Correct the distortion for each contour
+   */
+
+    // Initialisation of the variables which will be returned after the distortion. These variables are linked with the transformation applied to correct the distortion
+    std::vector< cv::Mat > rotation_matrix(contours.size());
+    std::vector< cv::Mat > scaling_matrix(contours.size());
+    std::vector< cv::Mat > translation_matrix(contours.size());
+    for (unsigned int contour_idx = 0; contour_idx < contours.size(); contour_idx++) {
+        rotation_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
+        scaling_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
+        translation_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
+    }
+
+    // Correct the distortion
+    std::vector< std::vector< cv::Point2f > > undistorted_contours;
+    imageprocessing::correction_distortion(contours, undistorted_contours, translation_matrix, rotation_matrix, scaling_matrix);
+    // Normalise the contours to be inside a unit circle
+    std::vector<double> factor_vector(undistorted_contours.size());
+    std::vector< std::vector< cv::Point2f > > normalised_contours;
+    initopt::normalise_all_contours(undistorted_contours, normalised_contours, factor_vector);
+    //std::vector< std::vector< cv::Point2f > > detected_signs_2f(normalised_contours.size());
+    //std::vector< std::vector< cv::Point > > detected_signs(normalised_contours.size());
+
+    // std::vector< cv::Vec4i > hierarchy;
+    // cv::findContours(bin_image, contours, hierarchy,
+    //   CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
 
     std::vector< cv::Point > approx;
     cv::Mat output_image = input_image.clone();
     cv::Scalar color(0,255,0);
-    for (int i = 0; i < contours.size(); i++){
+    for (unsigned int i = 0; i < contours.size(); i++){
       cv::approxPolyDP(cv::Mat(contours[i]), approx,
        cv::arcLength(cv::Mat(contours[i]), true) * 0.01, true);
 
@@ -174,41 +201,7 @@ int main(int argc, char *argv[]) {
     cv::imshow("Window", output_image);
     cv::waitKey(0);
 
-
     /*
-   * Extract candidates (i.e., contours) and remove inconsistent candidates
-   */
-
-   /*
-    std::vector< std::vector< cv::Point > > distorted_contours;
-    imageprocessing::contours_extraction(bin_image, distorted_contours);
-
-    /*
-   * Correct the distortion for each contour
-   */
-   /*
-    // Initialisation of the variables which will be returned after the distortion. These variables are linked with the transformation applied to correct the distortion
-    std::vector< cv::Mat > rotation_matrix(distorted_contours.size());
-    std::vector< cv::Mat > scaling_matrix(distorted_contours.size());
-    std::vector< cv::Mat > translation_matrix(distorted_contours.size());
-    for (unsigned int contour_idx = 0; contour_idx < distorted_contours.size(); contour_idx++) {
-        rotation_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
-        scaling_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
-        translation_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
-    }
-
-    // Correct the distortion
-    std::vector< std::vector< cv::Point2f > > undistorted_contours;
-    imageprocessing::correction_distortion(distorted_contours, undistorted_contours, translation_matrix, rotation_matrix, scaling_matrix);
-
-    // Normalise the contours to be inside a unit circle
-    std::vector<double> factor_vector(undistorted_contours.size());
-    std::vector< std::vector< cv::Point2f > > normalised_contours;
-    initopt::normalise_all_contours(undistorted_contours, normalised_contours, factor_vector);
-
-    std::vector< std::vector< cv::Point2f > > detected_signs_2f(normalised_contours.size());
-    std::vector< std::vector< cv::Point > > detected_signs(normalised_contours.size());
-
     // For each contours
     for (unsigned int contour_idx = 0; contour_idx < normalised_contours.size(); contour_idx++) {
 
