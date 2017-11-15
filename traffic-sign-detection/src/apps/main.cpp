@@ -98,32 +98,44 @@ int main(int argc, char *argv[]) {
    * Conversion of the image in some specific color space
    */
 
-    // Conversion of the rgb image in ihls color space
-    cv::Mat ihls_image;
-    colorconversion::convert_rgb_to_ihls(input_image, ihls_image);
-    // Conversion from RGB to logarithmic chromatic red and blue
-    std::vector< cv::Mat > log_image;
-    colorconversion::rgb_to_log_rb(input_image, log_image);
+   //Convert input image to HSV
+   cv::Mat hsv_image;
+	 cv::cvtColor(input_image, hsv_image, cv::COLOR_BGR2HSV);
+   // Threshold the HSV image, keep only the red pixels
+   cv::Mat lower_red_hue_range;
+   cv::Mat upper_red_hue_range;
+   cv::inRange(hsv_image, cv::Scalar(0, 100, 100), cv::Scalar(10, 255, 255), lower_red_hue_range);
+   cv::inRange(hsv_image, cv::Scalar(160, 100, 100), cv::Scalar(179, 255, 255), upper_red_hue_range);
 
-    cv::imwrite("log.jpg", ihls_image);
+    // Conversion of the rgb image in ihls color space
+    //cv::Mat ihls_image;
+    //colorconversion::convert_rgb_to_ihls(input_image, ihls_image);
+    // Conversion from RGB to logarithmic chromatic red and blue
+    //std::vector< cv::Mat > log_image;
+    //colorconversion::rgb_to_log_rb(input_image, log_image);
+
+    //cv::imwrite("log.jpg", ihls_image);
     /*
    * Segmentation of the image using the previous transformation
    */
 
+   // Combine the above two images
+   cv::Mat red_hue_image;
+   cv::addWeighted(lower_red_hue_range, 1.0, upper_red_hue_range, 1.0, 0.0, red_hue_image);
     // Segmentation of the IHLS and more precisely of the normalised hue channel
     // ONE PARAMETER TO CONSIDER - COLOR OF THE TRAFFIC SIGN TO DETECT - RED VS BLUE
-    int nhs_mode = 0; // nhs_mode == 0 -> red segmentation / nhs_mode == 1 -> blue segmentation
-    cv::Mat nhs_image_seg_red;
+    //int nhs_mode = 0; // nhs_mode == 0 -> red segmentation / nhs_mode == 1 -> blue segmentation
+    //cv::Mat nhs_image_seg_red;
 
-    segmentation::seg_norm_hue(ihls_image, nhs_image_seg_red, nhs_mode);
+    //segmentation::seg_norm_hue(ihls_image, nhs_image_seg_red, nhs_mode);
     //nhs_mode = 1; // nhs_mode == 0 -> red segmentation / nhs_mode == 1 -> blue segmentation
     //cv::Mat nhs_image_seg_blue;
-    cv::Mat nhs_image_seg_blue = nhs_image_seg_red.clone();
+    //cv::Mat nhs_image_seg_blue = nhs_image_seg_red.clone();
     //segmentation::seg_norm_hue(ihls_image, nhs_image_seg_blue, nhs_mode);
     // Segmentation of the log chromatic image
     // TODO - DEFINE THE THRESHOLD FOR THE BLUE TRAFFIC SIGN. FOR NOW WE AVOID THE PROCESSING FOR BLUE SIGN AND LET ONLY THE OTHER METHOD TO TAKE CARE OF IT.
-    cv::Mat log_image_seg;
-    segmentation::seg_log_chromatic(log_image, log_image_seg);
+    //cv::Mat log_image_seg;
+    //segmentation::seg_log_chromatic(log_image, log_image_seg);
 
     /*
    * Merging and filtering of the previous segmentation
@@ -131,22 +143,25 @@ int main(int argc, char *argv[]) {
 
     // Merge the results of previous segmentation using an OR operator
     // Pre-allocation of an image by cloning a previous image
-    cv::Mat merge_image_seg_with_red = nhs_image_seg_red.clone();
-    cv::Mat merge_image_seg = nhs_image_seg_blue.clone();
-    cv::bitwise_or(nhs_image_seg_red, log_image_seg, merge_image_seg_with_red);
-    cv::bitwise_or(nhs_image_seg_blue, merge_image_seg_with_red, merge_image_seg);
+    //cv::Mat merge_image_seg_with_red = nhs_image_seg_red.clone();
+    //cv::Mat merge_image_seg = nhs_image_seg_blue.clone();
+    //cv::bitwise_or(nhs_image_seg_red, log_image_seg, merge_image_seg_with_red);
+    //cv::bitwise_or(nhs_image_seg_blue, merge_image_seg_with_red, merge_image_seg);
 
     // Filter the image using median filtering and morpho math
     cv::Mat bin_image;
-    imageprocessing::filter_image(merge_image_seg, bin_image);
+    //imageprocessing::filter_image(merge_image_seg, bin_image);
+    imageprocessing::filter_image(red_hue_image, bin_image);
 
 
-    cv::imwrite("seg.jpg", bin_image);
 
+    cv::GaussianBlur(bin_image, bin_image, cv::Size(9, 9), 0, 0);
     /*
    * Extract candidates (i.e., contours) and remove inconsistent candidates
    */
    std::vector< std::vector< cv::Point > > contours;
+
+   cv::imwrite("seg.jpg", bin_image);
    imageprocessing::contours_extraction(bin_image, contours);
 
     /*
@@ -205,6 +220,9 @@ int main(int argc, char *argv[]) {
 
     cv::namedWindow("Window", CV_WINDOW_AUTOSIZE);
     cv::imshow("Window", output_image);
+    cv::imshow("Lower Threshold", lower_red_hue_range);
+    cv::imshow("Upper Threshold", upper_red_hue_range);
+    cv::imshow("Combined", red_hue_image);
     cv::waitKey(0);
 
     /*
