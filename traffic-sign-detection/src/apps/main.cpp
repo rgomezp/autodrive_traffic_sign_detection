@@ -55,6 +55,7 @@
 #include <chrono>
 #include <ctime>
 #include <limits>
+#include <utility>
 
 // OpenCV library
 #include <opencv2/opencv.hpp>
@@ -92,8 +93,8 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    std::vector< std::vector< cv::Point > > current_corners;
-    std::vector< std::vector< cv::Point > > prev_corners;
+    std::vector< pair< std::vector< cv::Point >, boolean > > current_corners;
+    std::vector< pair< std::vector< cv::Point >, boolean > > prev_corners;
     while(true){
       // Check that the image read is a 3 channels image
       cap >> input_image;
@@ -102,7 +103,6 @@ int main(int argc, char *argv[]) {
       }
       CV_Assert(input_image.channels() == 3);
 
-<<<<<<< Updated upstream
 
       /*
      * Conversion of the image in some specific color space
@@ -117,83 +117,16 @@ int main(int argc, char *argv[]) {
      cv::inRange(hsv_image, cv::Scalar(0, 100, 100), cv::Scalar(10, 255, 255), lower_red_hue_range);
      cv::inRange(hsv_image, cv::Scalar(160, 100, 100), cv::Scalar(179, 255, 255), upper_red_hue_range);
 
-      // Conversion of the rgb image in ihls color space
-      //cv::Mat ihls_image;
-      //colorconversion::convert_rgb_to_ihls(input_image, ihls_image);
-      // Conversion from RGB to logarithmic chromatic red and blue
-      //std::vector< cv::Mat > log_image;
-      //colorconversion::rgb_to_log_rb(input_image, log_image);
 
-      //cv::imwrite("log.jpg", ihls_image);
-      /*
-     * Segmentation of the image using the previous transformation
-     */
-=======
-    /*
-   * Conversion of the image in some specific color space
-   */
-
-   //Convert input image to HSV
-   cv::Mat hsv_image;
-	 cv::cvtColor(input_image, hsv_image, cv::COLOR_BGR2HSV);
-   // Threshold the HSV image, keep only the red pixels
-   cv::Mat lower_red_hue_range;
-   cv::Mat upper_red_hue_range;
-   cv::inRange(hsv_image, cv::Scalar(0, 100, 100), cv::Scalar(10, 255, 255), lower_red_hue_range);
-   cv::inRange(hsv_image, cv::Scalar(160, 100, 100), cv::Scalar(179, 255, 255), upper_red_hue_range);
-
-
-
-   // Combine the above two images
-   cv::Mat red_hue_image;
-   cv::addWeighted(lower_red_hue_range, 1.0, upper_red_hue_range, 1.0, 0.0, red_hue_image);
->>>>>>> Stashed changes
 
      // Combine the above two images
      cv::Mat red_hue_image;
      cv::addWeighted(lower_red_hue_range, 1.0, upper_red_hue_range, 1.0, 0.0, red_hue_image);
-      // Segmentation of the IHLS and more precisely of the normalised hue channel
-      // ONE PARAMETER TO CONSIDER - COLOR OF THE TRAFFIC SIGN TO DETECT - RED VS BLUE
-      //int nhs_mode = 0; // nhs_mode == 0 -> red segmentation / nhs_mode == 1 -> blue segmentation
-      //cv::Mat nhs_image_seg_red;
-
-      //segmentation::seg_norm_hue(ihls_image, nhs_image_seg_red, nhs_mode);
-      //nhs_mode = 1; // nhs_mode == 0 -> red segmentation / nhs_mode == 1 -> blue segmentation
-      //cv::Mat nhs_image_seg_blue;
-      //cv::Mat nhs_image_seg_blue = nhs_image_seg_red.clone();
-      //segmentation::seg_norm_hue(ihls_image, nhs_image_seg_blue, nhs_mode);
-      // Segmentation of the log chromatic image
-      // TODO - DEFINE THE THRESHOLD FOR THE BLUE TRAFFIC SIGN. FOR NOW WE AVOID THE PROCESSING FOR BLUE SIGN AND LET ONLY THE OTHER METHOD TO TAKE CARE OF IT.
-      //cv::Mat log_image_seg;
-      //segmentation::seg_log_chromatic(log_image, log_image_seg);
-
-      /*
-     * Merging and filtering of the previous segmentation
-     */
-
-<<<<<<< Updated upstream
-      // Merge the results of previous segmentation using an OR operator
-      // Pre-allocation of an image by cloning a previous image
-      //cv::Mat merge_image_seg_with_red = nhs_image_seg_red.clone();
-      //cv::Mat merge_image_seg = nhs_image_seg_blue.clone();
-      //cv::bitwise_or(nhs_image_seg_red, log_image_seg, merge_image_seg_with_red);
-      //cv::bitwise_or(nhs_image_seg_blue, merge_image_seg_with_red, merge_image_seg);
 
       // Filter the image using median filtering and morpho math
       cv::Mat bin_image;
-      //imageprocessing::filter_image(merge_image_seg, bin_image);
       imageprocessing::filter_image(red_hue_image, bin_image);
 
-=======
-    cv::GaussianBlur(bin_image, bin_image, cv::Size(9, 9), 0, 0);
-    /*
-   * Extract candidates (i.e., contours) and remove inconsistent candidates
-   */
-   std::vector< std::vector< cv::Point > > contours;
->>>>>>> Stashed changes
-
-
-<<<<<<< Updated upstream
       cv::GaussianBlur(bin_image, bin_image, cv::Size(9, 9), 0, 0);
       /*
      * Extract candidates (i.e., contours) and remove inconsistent candidates
@@ -202,23 +135,7 @@ int main(int argc, char *argv[]) {
 
      //cv::imwrite("seg.jpg", bin_image);
      imageprocessing::contours_extraction(bin_image, contours);
-=======
-    // Initialisation of the variables which will be returned after the distortion. These variables are linked with the transformation applied to correct the distortion
-    std::vector< cv::Mat > rotation_matrix(contours.size());
-    std::vector< cv::Mat > scaling_matrix(contours.size());
-    std::vector< cv::Mat > translation_matrix(contours.size());
-    for (unsigned int contour_idx = 0; contour_idx < contours.size(); contour_idx++) {
-        rotation_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
-        scaling_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
-        translation_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
-    }
 
-
->>>>>>> Stashed changes
-
-      /*
-     * Correct the distortion for each contour
-     */
 
       // Initialisation of the variables which will be returned after the distortion. These variables are linked with the transformation applied to correct the distortion
       std::vector< cv::Mat > rotation_matrix(contours.size());
@@ -229,18 +146,6 @@ int main(int argc, char *argv[]) {
           scaling_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
           translation_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
       }
-
-      /*
-      // Correct the distortion
-      std::vector< std::vector< cv::Point2f > > undistorted_contours;
-      imageprocessing::correction_distortion(contours, undistorted_contours, translation_matrix, rotation_matrix, scaling_matrix);
-      // Normalise the contours to be inside a unit circle
-      std::vector<double> factor_vector(undistorted_contours.size());
-      std::vector< std::vector< cv::Point2f > > normalised_contours;
-      initopt::normalise_all_contours(undistorted_contours, normalised_contours, factor_vector);
-      //std::vector< std::vector< cv::Point2f > > detected_signs_2f(normalised_contours.size());
-      //std::vector< std::vector< cv::Point > > detected_signs(normalised_contours.size());
-      */
 
       std::vector< cv::Point > approx;
       cv::Mat output_image = input_image.clone();
@@ -278,7 +183,38 @@ int main(int argc, char *argv[]) {
 
         tempStore.push_back(new cv::Point(minx, miny));
         tempStore.push_back(new cv::Point(maxx, maxy));
-        current_corners.push_back(tempStore);
+        current_corners.push_back(std::make_pair(tempStore, false));
+        for (int i = 0; i < prev_corners.size(); i++){
+          for (int j = 0; j < current_corners.size(); j++){
+            boolean overlap = false;
+            std::pair < std::vector< cv::Point >, boolean > contourPair = current_corners[j];
+            std::pair < std::vector< cv::Point >, boolean > prevContourPair = prev_corners[i];
+            cv::Point currPoint = contourPair.first[0];
+            cv::Point currPoint1 = contourPair.first[1];
+            cv::Point prevPoint = prevContourPair.first[0];
+            cv::Point prevPoint1 = prevContourPair.first[1];
+            if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
+              if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
+                overlap = true;
+              }
+            } else if (currPoint1.x > prevPoint.x && currPoint1.x < prevPoint1.x){
+              if (currPoint1.y > prevPoint.y && currPoint1.y < prevPoint1.y){
+                overlap = true;
+              }
+            }
+
+            if (overlap){
+              current_corners[j] = std::make_pair(contourPair.first, true);
+            }
+          }
+        }
+
+        for (int i = 0; i < current_corners.size(); i++) {
+          if (!current_corners[i].second){
+            current_corners.erase(current_corners.begin() + i);
+            i--;
+          }
+        }
 
         if (approx.size() == 8){
           std::cout << "STOP SIGN" << std::endl;
