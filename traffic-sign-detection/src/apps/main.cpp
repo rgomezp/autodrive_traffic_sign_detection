@@ -184,37 +184,6 @@ int main(int argc, char *argv[]) {
         tempStore.push_back(new cv::Point(minx, miny));
         tempStore.push_back(new cv::Point(maxx, maxy));
         current_corners.push_back(std::make_pair(tempStore, false));
-        for (int i = 0; i < prev_corners.size(); i++){
-          for (int j = 0; j < current_corners.size(); j++){
-            boolean overlap = false;
-            std::pair < std::vector< cv::Point >, boolean > contourPair = current_corners[j];
-            std::pair < std::vector< cv::Point >, boolean > prevContourPair = prev_corners[i];
-            cv::Point currPoint = contourPair.first[0];
-            cv::Point currPoint1 = contourPair.first[1];
-            cv::Point prevPoint = prevContourPair.first[0];
-            cv::Point prevPoint1 = prevContourPair.first[1];
-            if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
-              if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
-                overlap = true;
-              }
-            } else if (currPoint1.x > prevPoint.x && currPoint1.x < prevPoint1.x){
-              if (currPoint1.y > prevPoint.y && currPoint1.y < prevPoint1.y){
-                overlap = true;
-              }
-            }
-
-            if (overlap){
-              current_corners[j] = std::make_pair(contourPair.first, true);
-            }
-          }
-        }
-
-        for (int i = 0; i < current_corners.size(); i++) {
-          if (!current_corners[i].second){
-            current_corners.erase(current_corners.begin() + i);
-            i--;
-          }
-        }
 
         if (approx.size() == 8){
           std::cout << "STOP SIGN" << std::endl;
@@ -226,6 +195,39 @@ int main(int argc, char *argv[]) {
           //std::cout << "OTHER TYPES OF SIGNS" << std::endl;
           //std::cout << "EDGES: " << approx.size() << std::endl;
           //cv::drawContours(output_image, cv::Mat(contours[i]), -1, color, 2, 8);
+        }
+      }
+
+      // Filtering
+      for (int i = 0; i < prev_corners.size(); i++){
+        for (int j = 0; j < current_corners.size(); j++){
+          boolean overlap = false;
+          std::pair < std::vector< cv::Point >, boolean > contourPair = current_corners[j];
+          std::pair < std::vector< cv::Point >, boolean > prevContourPair = prev_corners[i];
+          cv::Point currPoint = contourPair.first[0];
+          cv::Point currPoint1 = contourPair.first[1];
+          cv::Point prevPoint = prevContourPair.first[0];
+          cv::Point prevPoint1 = prevContourPair.first[1];
+          if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
+            if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
+              overlap = true;
+            }
+          } else if (currPoint1.x > prevPoint.x && currPoint1.x < prevPoint1.x){
+            if (currPoint1.y > prevPoint.y && currPoint1.y < prevPoint1.y){
+              overlap = true;
+            }
+          }
+
+          if (overlap){
+            current_corners[j] = std::make_pair(contourPair.first, true);
+          }
+        }
+      }
+
+      for (int i = 0; i < current_corners.size(); i++) {
+        if (!current_corners[i].second){
+          current_corners.erase(current_corners.begin() + i);
+          i--;
         }
       }
 
