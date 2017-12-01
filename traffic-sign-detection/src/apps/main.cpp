@@ -64,6 +64,29 @@
 #include <Eigen/Core>
 
 
+struct shapeTracker{
+  int id;
+  std::vector < cv::Point > contour;
+  std::vector < cv::Point > edges;
+  int counter;
+  bool incremented = false;
+
+  shapeTracker(int aId, std::vector < cv::Point > aEdges,
+    std::vector < cv::Point > aContour, int aCounter) :
+    id(aId), edges(aEdges), contour(aContour), counter(aCounter){}
+
+  void incrementCounter(){
+    counter++;
+  }
+
+  void setID(int otherId){
+    id = otherId;
+    incremented = true;
+  }
+
+};
+
+
 //TODO: code here should be abstracted outside the app, modify tests accordingly
 int main(int argc, char *argv[]) {
 
@@ -93,8 +116,10 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    std::vector< pair< std::vector< cv::Point >, boolean > > current_corners;
-    std::vector< pair< std::vector< cv::Point >, boolean > > prev_corners;
+    std::vector< shapeTracker > current_corners;
+    std::vector< shapeTracker > prev_corners;
+    std::vector< shapeTracker > contoursToDraw;
+    int id = 0;
     while(true){
       // Check that the image read is a 3 channels image
       cap >> input_image;
@@ -181,33 +206,29 @@ int main(int argc, char *argv[]) {
           maxy = std::max(approx[x].y, maxy);
         }
 
-        tempStore.push_back(new cv::Point(minx, miny));
-        tempStore.push_back(new cv::Point(maxx, maxy));
-        current_corners.push_back(std::make_pair(tempStore, false));
+        cv::Point point1 = new cv::Point(minx, miny);
+        cv::Point point2 = new cv::Point(maxx, maxy);
+        tempStore.push_back(*point1);
+        tempStore.push_back(*point2);
+        shapeTracker shapeTrack = new shapeTracker(id++, tempStore, contours[i], 0);
+        current_corners.push_back(*shapeTrack);
 
-        if (approx.size() == 8){
-          std::cout << "STOP SIGN" << std::endl;
-          cv::drawContours(output_image, cv::Mat(contours[i]), -1, color, 2, 8);
-        } else if (approx.size() == 3){
-          std::cout << "TRIANGLE SIGN" << std::endl;
-          cv::drawContours(output_image, cv::Mat(contours[i]), -1, color, 2, 8);
-        } else {
-          //std::cout << "OTHER TYPES OF SIGNS" << std::endl;
-          //std::cout << "EDGES: " << approx.size() << std::endl;
-          //cv::drawContours(output_image, cv::Mat(contours[i]), -1, color, 2, 8);
-        }
       }
 
       // Filtering
       for (int i = 0; i < prev_corners.size(); i++){
         for (int j = 0; j < current_corners.size(); j++){
           boolean overlap = false;
-          std::pair < std::vector< cv::Point >, boolean > contourPair = current_corners[j];
-          std::pair < std::vector< cv::Point >, boolean > prevContourPair = prev_corners[i];
-          cv::Point currPoint = contourPair.first[0];
-          cv::Point currPoint1 = contourPair.first[1];
-          cv::Point prevPoint = prevContourPair.first[0];
-          cv::Point prevPoint1 = prevContourPair.first[1];
+          shapeTracker shape = current_corners[j];
+          shapeTracker prevShape = prev_corners[i];
+          cv::Point currPoint = shape.contour[0];
+          cv::Point currPoint1 = shape.contour[1];
+          if (shape.incremented){
+            continue;
+          }
+          shape.incremented = false;
+          cv::Point prevPoint = prevShape.shape.contour[0];
+          cv::Point prevPoint1 = prevShape.contour[1];
           if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
             if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
               overlap = true;
@@ -219,15 +240,41 @@ int main(int argc, char *argv[]) {
           }
 
           if (overlap){
-            current_corners[j] = std::make_pair(contourPair.first, true);
+            shape.incrementCounter();
+            shape.setID(prevShape.id);
+            current_corners[j] = shape;
+            if (shape.counter == 10){
+              contoursToDraw.push_back(shape);
+            }
+            break;
+
           }
         }
       }
 
       for (int i = 0; i < current_corners.size(); i++) {
-        if (!current_corners[i].second){
+        if (!current_corners[i].incremented || current_corners[i].counter >= 10){
           current_corners.erase(current_corners.begin() + i);
           i--;
+        }
+      }
+
+      for (int i = 0; i < contoursToDraw.size(); i++){
+        std::vector< cv::Point > approxPoints;
+        cv::approxPolyDP(cv::Mat(contoursToDraw[i]), approxPoints,
+         cv::arcLength(cv::Mat(contoursToDraw[i]), true) * 0.01, true);
+
+
+        if (approxPoints.size() == 8){
+          std::cout << "STOP SIGN" << std::endl;
+          cv::drawContours(output_image, cv::Mat(contoursToDraw[i]), -1, color, 2, 8);
+        } else if (approxPoints.size() == 3){
+          std::cout << "TRIANGLE SIGN" << std::endl;
+          cv::drawContours(output_image, cv::Mat(contoursToDraw[i]), -1, color, 2, 8);
+        } else {
+          //std::cout << "OTHER TYPES OF SIGNS" << std::endl;
+          //std::cout << "EDGES: " << approx.size() << std::endl;
+          //cv::drawContours(output_image, cv::Mat(contours[i]), -1, color, 2, 8);
         }
       }
 
