@@ -206,10 +206,10 @@ int main(int argc, char *argv[]) {
           maxy = std::max(approx[x].y, maxy);
         }
 
-        cv::Point point1 = new cv::Point(minx, miny);
-        cv::Point point2 = new cv::Point(maxx, maxy);
-        tempStore.push_back(*point1);
-        tempStore.push_back(*point2);
+        cv::Point *point1 = new cv::Point(minx, miny);
+        cv::Point *point2 = new cv::Point(maxx, maxy);
+        tempStore.push_back(point1);
+        tempStore.push_back(point2);
         shapeTracker shapeTrack = new shapeTracker(id++, tempStore, contours[i], 0);
         current_corners.push_back(*shapeTrack);
 
