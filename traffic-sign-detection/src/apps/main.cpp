@@ -216,6 +216,9 @@ int main(int argc, char *argv[]) {
      */
      std::vector< std::vector< cv::Point > > contours;
 
+
+     cv::imshow("Red Filter", bin_image);
+
      //cv::imwrite("seg.jpg", bin_image);
      imageprocessing::contours_extraction(bin_image, contours);
 
@@ -234,6 +237,7 @@ int main(int argc, char *argv[]) {
       cv::Mat output_image = input_image.clone();
       cv::Scalar color(0,255,0);
       for (unsigned int i = 0; i < contours.size(); i++){
+        cv::drawContours(upper_red_hue_range, contours, -1, color, 2, 8);
         cv::approxPolyDP(cv::Mat(contours[i]), approx,
          cv::arcLength(cv::Mat(contours[i]), true) * 0.01, true);
         //Display points to terminal
@@ -285,7 +289,7 @@ int main(int argc, char *argv[]) {
             prev_corners.erase(prev_corners.begin() + i);
             i--;
             std::cout << "COUNT: " << shape.getCount() << std::endl;
-            if (shape.getCount() >= 2) {
+            if (shape.getCount() >= 1) {
               contoursToDraw.push_back(shape.getContour());
               std::cout << "WOOOHOOO" << std::endl;
               break;
@@ -327,6 +331,7 @@ int main(int argc, char *argv[]) {
       prev_corners = current_corners;
       current_corners.clear();
       cv::imshow("Window", output_image);
+      cv::imshow("Red Filter With Contours", upper_red_hue_range);
       cv::waitKey(10);
     }
 
