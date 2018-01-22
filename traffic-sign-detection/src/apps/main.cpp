@@ -65,23 +65,81 @@
 
 
 struct shapeTracker{
-  int id;
+  // int id;
   std::vector < cv::Point > contour;
   std::vector < cv::Point > edges;
   int counter;
   bool incremented = false;
 
-  shapeTracker(int aId, std::vector < cv::Point > aEdges,
+  shapeTracker(std::vector < cv::Point > aEdges,
     std::vector < cv::Point > aContour, int aCounter) :
-    id(aId), edges(aEdges), contour(aContour), counter(aCounter){}
+    edges(aEdges), contour(aContour), counter(aCounter){}
 
   void incrementCounter(){
     counter++;
   }
 
+  void setIncrementedCounter(int count) {
+    counter = count + 1;
+  }
+
+  int getCount() {
+    return counter;
+  }
+
+  std::vector < cv::Point > getContour() {
+    return contour;
+  }
+
+  /*
   void setID(int otherId){
     id = otherId;
     incremented = true;
+  }
+  */
+
+  bool operator==(const shapeTracker rhs) {
+
+    cv::Point currPoint = edges[0];
+    cv::Point currPoint1 = edges[1];
+
+    cv::Point prevPoint = rhs.edges[0];
+    cv::Point prevPoint1 = rhs.edges[1];
+
+
+    //std::cout << "(" << currPoint.x << "," << currPoint.y << ")" << std::endl;
+    //std::cout << "(" << currPoint1.x << "," << currPoint1.y << ")" << std::endl;
+    //std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
+    //std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
+
+    if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
+      if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
+        //std::cout << "COMPARISON PASSED" << std::endl;
+        incrementCounter();
+        return true;
+      }
+    } else if (currPoint1.x > prevPoint.x && currPoint1.x < prevPoint1.x){
+      if (currPoint1.y > prevPoint.y && currPoint1.y < prevPoint1.y){
+        //std::cout << "COMPARISON PASSED" << std::endl;
+        incrementCounter();
+        return true;
+      }
+    } else if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
+      if (currPoint1.y > prevPoint.y && currPoint1.y < prevPoint1.y){
+        //std::cout << "COMPARISON PASSED" << std::endl;
+        incrementCounter();
+        return true;
+      }
+    } else if (currPoint1.x > prevPoint.x && currPoint1.x < prevPoint1.x){
+      if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
+        //std::cout << "COMPARISON PASSED" << std::endl;
+        incrementCounter();
+        return true;
+      }
+    }
+
+    return false;
+
   }
 
 };
@@ -118,8 +176,8 @@ int main(int argc, char *argv[]) {
 
     std::vector< shapeTracker > current_corners;
     std::vector< shapeTracker > prev_corners;
-    std::vector< shapeTracker > contoursToDraw;
-    int id = 0;
+    std::vector< std::vector< cv::Point > > contoursToDraw;
+    // int id = 0;
     while(true){
       // Check that the image read is a 3 channels image
       cap >> input_image;
@@ -208,9 +266,9 @@ int main(int argc, char *argv[]) {
 
         cv::Point *point1 = new cv::Point(minx, miny);
         cv::Point *point2 = new cv::Point(maxx, maxy);
-        tempStore.push_back(point1);
-        tempStore.push_back(point2);
-        shapeTracker shapeTrack = new shapeTracker(id++, tempStore, contours[i], 0);
+        tempStore.push_back(*point1);
+        tempStore.push_back(*point2);
+        shapeTracker *shapeTrack = new shapeTracker(tempStore, contours[i], 0);
         current_corners.push_back(*shapeTrack);
 
       }
@@ -218,46 +276,28 @@ int main(int argc, char *argv[]) {
       // Filtering
       for (int i = 0; i < prev_corners.size(); i++){
         for (int j = 0; j < current_corners.size(); j++){
-          boolean overlap = false;
+
           shapeTracker shape = current_corners[j];
           shapeTracker prevShape = prev_corners[i];
-          cv::Point currPoint = shape.contour[0];
-          cv::Point currPoint1 = shape.contour[1];
-          if (shape.incremented){
-            continue;
-          }
-          shape.incremented = false;
-          cv::Point prevPoint = prevShape.shape.contour[0];
-          cv::Point prevPoint1 = prevShape.contour[1];
-          if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
-            if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
-              overlap = true;
+          // std::cout << "COMPARISON:" << std::endl;
+          if (shape == prevShape) {
+            current_corners[j].setIncrementedCounter(prevShape.getCount());
+            prev_corners.erase(prev_corners.begin() + i);
+            i--;
+            std::cout << "COUNT: " << shape.getCount() << std::endl;
+            if (shape.getCount() >= 2) {
+              contoursToDraw.push_back(shape.getContour());
+              std::cout << "WOOOHOOO" << std::endl;
+              break;
             }
-          } else if (currPoint1.x > prevPoint.x && currPoint1.x < prevPoint1.x){
-            if (currPoint1.y > prevPoint.y && currPoint1.y < prevPoint1.y){
-              overlap = true;
-            }
-          }
 
-          if (overlap){
-            shape.incrementCounter();
-            shape.setID(prevShape.id);
-            current_corners[j] = shape;
-            if (shape.counter == 10){
-              contoursToDraw.push_back(shape);
-            }
             break;
 
           }
+
         }
       }
 
-      for (int i = 0; i < current_corners.size(); i++) {
-        if (!current_corners[i].incremented || current_corners[i].counter >= 10){
-          current_corners.erase(current_corners.begin() + i);
-          i--;
-        }
-      }
 
       for (int i = 0; i < contoursToDraw.size(); i++){
         std::vector< cv::Point > approxPoints;
@@ -265,9 +305,10 @@ int main(int argc, char *argv[]) {
          cv::arcLength(cv::Mat(contoursToDraw[i]), true) * 0.01, true);
 
 
+         cv::drawContours(output_image, cv::Mat(contoursToDraw[i]), -1, color, 2, 8);
+        /*
         if (approxPoints.size() == 8){
           std::cout << "STOP SIGN" << std::endl;
-          cv::drawContours(output_image, cv::Mat(contoursToDraw[i]), -1, color, 2, 8);
         } else if (approxPoints.size() == 3){
           std::cout << "TRIANGLE SIGN" << std::endl;
           cv::drawContours(output_image, cv::Mat(contoursToDraw[i]), -1, color, 2, 8);
@@ -276,7 +317,12 @@ int main(int argc, char *argv[]) {
           //std::cout << "EDGES: " << approx.size() << std::endl;
           //cv::drawContours(output_image, cv::Mat(contours[i]), -1, color, 2, 8);
         }
+        */
+        contoursToDraw.erase(contoursToDraw.begin() + i);
       }
+
+      // std::cout << "PREVIOUS: " << prev_corners.size() << std::endl;
+      // std::cout << "CURRENT: " << current_corners.size() << std::endl;
 
       prev_corners = current_corners;
       current_corners.clear();
