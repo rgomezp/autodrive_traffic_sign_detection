@@ -65,19 +65,14 @@
 
 
 struct shapeTracker{
-  // int id;
   std::vector < cv::Point > contour;
   std::vector < cv::Point > edges;
-  int counter;
+  int counter = 0;
   bool incremented = false;
 
   shapeTracker(std::vector < cv::Point > aEdges,
-    std::vector < cv::Point > aContour, int aCounter) :
-    edges(aEdges), contour(aContour), counter(aCounter){}
-
-  void incrementCounter(){
-    counter++;
-  }
+    std::vector < cv::Point > aContour) :
+    edges(aEdges), contour(aContour){}
 
   void setIncrementedCounter(int count) {
     counter = count + 1;
@@ -91,12 +86,6 @@ struct shapeTracker{
     return contour;
   }
 
-  /*
-  void setID(int otherId){
-    id = otherId;
-    incremented = true;
-  }
-  */
 
   bool operator==(const shapeTracker rhs) {
 
@@ -111,70 +100,20 @@ struct shapeTracker{
     prevPoint1.x = prevPoint1.x + 10;
     prevPoint1.y = prevPoint1.y + 10;
 
-
-    //std::cout << "(" << currPoint.x << "," << currPoint.y << ")" << std::endl;
-    //std::cout << "(" << currPoint1.x << "," << currPoint1.y << ")" << std::endl;
-    //std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
-    //std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
-
-    /*
-    std::cout << "SHAPE COMPARISON" << std::endl;
-    std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
-    std::cout << "(" << prevPoint.x << "," << prevPoint1.y << ")" << std::endl;
-    std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
-    std::cout << "(" << prevPoint1.x << "," << prevPoint.y << ")" << std::endl;
-    std::cout << "(" << currPoint.x << "," << currPoint.y << ")" << std::endl;
-    std::cout << "(" << currPoint.x << "," << currPoint1.y << ")" << std::endl;
-    std::cout << "(" << currPoint1.x << "," << currPoint1.y << ")" << std::endl;
-    std::cout << "(" << currPoint1.x << "," << currPoint.y << ")" << std::endl;
-    */
-
     if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
       if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
-        /*
-        std::cout << "COMPARISON PASSED" << std::endl;
-        std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
-        std::cout << "(" << prevPoint.x << "," << prevPoint1.y << ")" << std::endl;
-        std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
-        std::cout << "(" << prevPoint1.x << "," << prevPoint.y << ")" << std::endl;
-        std::cout << "(" << currPoint.x << "," << currPoint.y << ")" << std::endl;
-        */
         return true;
       }
     } else if (currPoint1.x > prevPoint.x && currPoint1.x < prevPoint1.x){
       if (currPoint1.y > prevPoint.y && currPoint1.y < prevPoint1.y){
-        /*
-        std::cout << "COMPARISON PASSED" << std::endl;
-        std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
-        std::cout << "(" << prevPoint.x << "," << prevPoint1.y << ")" << std::endl;
-        std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
-        std::cout << "(" << prevPoint1.x << "," << prevPoint.y << ")" << std::endl;
-        std::cout << "(" << currPoint1.x << "," << currPoint1.y << ")" << std::endl;
-        */
         return true;
       }
     } else if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
       if (currPoint1.y > prevPoint.y && currPoint1.y < prevPoint1.y){
-        /*
-        std::cout << "COMPARISON PASSED" << std::endl;
-        std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
-        std::cout << "(" << prevPoint.x << "," << prevPoint1.y << ")" << std::endl;
-        std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
-        std::cout << "(" << prevPoint1.x << "," << prevPoint.y << ")" << std::endl;
-        std::cout << "(" << currPoint.x << "," << currPoint1.y << ")" << std::endl;
-        */
         return true;
       }
     } else if (currPoint1.x > prevPoint.x && currPoint1.x < prevPoint1.x){
       if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
-        /*
-        std::cout << "COMPARISON PASSED" << std::endl;
-        std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
-        std::cout << "(" << prevPoint.x << "," << prevPoint1.y << ")" << std::endl;
-        std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
-        std::cout << "(" << prevPoint1.x << "," << prevPoint.y << ")" << std::endl;
-        std::cout << "(" << currPoint1.x << "," << currPoint.y << ")" << std::endl;
-        */
         return true;
       }
     }
@@ -207,7 +146,7 @@ int main(int argc, char *argv[]) {
 
     // Read the input image
     cv::VideoCapture cap(input_filename);
-    cv::Mat input_image; // = cv::imread(input_filename);
+    cv::Mat input_image;
 
     // Check that the image has been opened
     if (!cap.isOpened()) {
@@ -220,7 +159,6 @@ int main(int argc, char *argv[]) {
     std::vector< std::vector< cv::Point > > contoursToDraw;
     std::vector< std::vector< cv::Point > > temp_contours;
     std::vector< std::vector< cv::Point > > contours;
-    // int id = 0;
     while(true){
       // Check that the image read is a 3 channels image
       cap >> input_image;
@@ -257,18 +195,8 @@ int main(int argc, char *argv[]) {
       /*
      * Extract candidates (i.e., contours) and remove inconsistent candidates
      */
-
-     //contours
-
-     //cv::imwrite("seg.jpg", bin_image);
-
      imageprocessing::contours_extraction(bin_image, contours);
-/*
-     for (int x = 0; x < temp_contours.size(); x++) {
-       contours.push_back(temp_contours[x]);
-     }
-     temp_contours = contours;
-*/
+
 
       // Initialisation of the variables which will be returned after the distortion. These variables are linked with the transformation applied to correct the distortion
       std::vector< cv::Mat > rotation_matrix(contours.size());
@@ -286,14 +214,7 @@ int main(int argc, char *argv[]) {
       for (unsigned int i = 0; i < contours.size(); i++){
         cv::approxPolyDP(cv::Mat(contours[i]), approx,
          cv::arcLength(cv::Mat(contours[i]), true) * 0.01, true);
-        //Display points to terminal
-        /*std::cout<<"Contour "<<i<<" Points:"<<std::endl;
-        if(approx.size() <= 8){
-          for(int i=0;i<approx.size(); i++){
-            std::cout<<approx[i].x<<","<<approx[i].y<<std::endl;
-          }
-        }
-        */
+
         std::vector< cv::Point > tempStore;
         int minx = 0;
         int miny = 0;
@@ -318,16 +239,9 @@ int main(int argc, char *argv[]) {
         cv::Point *point2 = new cv::Point(maxx, maxy);
         tempStore.push_back(*point1);
         tempStore.push_back(*point2);
-        shapeTracker *shapeTrack = new shapeTracker(tempStore, contours[i], 0);
+        shapeTracker *shapeTrack = new shapeTracker(tempStore, contours[i]);
         current_corners.push_back(*shapeTrack);
 
-      }
-
-      for (int i = 0; i < prev_corners.size(); i++){
-        std::cout << "PREV: " << prev_corners[i].getCount() << std::endl;
-      }
-      for (int i = 0; i < current_corners.size(); i++){
-        std::cout << "CURR: " << current_corners[i].getCount() << std::endl;
       }
 
       // Filtering
@@ -336,16 +250,15 @@ int main(int argc, char *argv[]) {
 
           shapeTracker& shape = current_corners[j];
           shapeTracker& prevShape = prev_corners[i];
-          // std::cout << "COMPARISON:" << std::endl;
           if (shape == prevShape) {
             shape.setIncrementedCounter(prevShape.getCount());
             prev_corners.erase(prev_corners.begin() + i);
             i--;
-            std::cout << "COUNT: " << shape.getCount() << std::endl;
             if (shape.getCount() >= 20) {
               contoursToDraw.push_back(shape.getContour());
-              std::cout << "WOOOHOOO" << std::endl;
-              //current_corners.erase(current_corners)
+              if (shape.getCount() < 21) {
+                std::cout << "STOP SIGN DETECTED" << std::endl;
+              }
               break;
             }
 
@@ -384,13 +297,6 @@ int main(int argc, char *argv[]) {
       cv::imshow("Window", output_image);
       cv::waitKey(10);
     }
-
-    /*
-    cv::namedWindow("Window", CV_WINDOW_AUTOSIZE);
-    cv::imshow("Window", output_image);
-    cv::imshow("Lower Threshold", lower_red_hue_range);
-    cv::imshow("Upper Threshold", upper_red_hue_range);
-    cv::imshow("Combined", red_hue_image);*/
     cv::waitKey(0);
 
 }
