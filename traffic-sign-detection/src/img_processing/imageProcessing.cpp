@@ -176,7 +176,7 @@ void contours_extraction(const cv::Mat& bin_image, std::vector< std::vector< cv:
     // Allocate the needed element
     std::vector< std::vector< cv::Point > > contours;
     std::vector< cv::Vec4i > hierarchy;
-
+    
     // Extract the raw contours
     cv::findContours(bin_image, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
 
@@ -195,6 +195,7 @@ void contours_extraction(const cv::Mat& bin_image, std::vector< std::vector< cv:
     // Extract the contours
     // DEFAULT VALUE OF 2.0 PIXELS
     contours_thresholding(hull_contours, contours, final_contours);
+
 }
 
 // Function to make forward transformation -- INPUT CV::POINT

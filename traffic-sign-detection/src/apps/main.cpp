@@ -55,12 +55,74 @@
 #include <chrono>
 #include <ctime>
 #include <limits>
+#include <utility>
 
 // OpenCV library
 #include <opencv2/opencv.hpp>
 
 // Eigen library
 #include <Eigen/Core>
+
+
+struct shapeTracker{
+  std::vector < cv::Point > contour;
+  std::vector < cv::Point > edges;
+  int counter = 0;
+  bool incremented = false;
+
+  shapeTracker(std::vector < cv::Point > aEdges,
+    std::vector < cv::Point > aContour) :
+    edges(aEdges), contour(aContour){}
+
+  void setIncrementedCounter(int count) {
+    counter = count + 1;
+  }
+
+  int getCount() {
+    return counter;
+  }
+
+  std::vector < cv::Point > getContour() {
+    return contour;
+  }
+
+
+  bool operator==(const shapeTracker rhs) {
+
+    cv::Point currPoint = edges[0];
+    cv::Point currPoint1 = edges[1];
+
+    cv::Point prevPoint = rhs.edges[0];
+    cv::Point prevPoint1 = rhs.edges[1];
+
+    prevPoint.x = prevPoint.x - 10;
+    prevPoint.y = prevPoint.y - 10;
+    prevPoint1.x = prevPoint1.x + 10;
+    prevPoint1.y = prevPoint1.y + 10;
+
+    if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
+      if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
+        return true;
+      }
+    } else if (currPoint1.x > prevPoint.x && currPoint1.x < prevPoint1.x){
+      if (currPoint1.y > prevPoint.y && currPoint1.y < prevPoint1.y){
+        return true;
+      }
+    } else if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
+      if (currPoint1.y > prevPoint.y && currPoint1.y < prevPoint1.y){
+        return true;
+      }
+    } else if (currPoint1.x > prevPoint.x && currPoint1.x < prevPoint1.x){
+      if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
+        return true;
+      }
+    }
+
+    return false;
+
+  }
+
+};
 
 
 //TODO: code here should be abstracted outside the app, modify tests accordingly
@@ -83,239 +145,158 @@ int main(int argc, char *argv[]) {
     std::string input_filename(argv[1]);
 
     // Read the input image
-    cv::Mat input_image = cv::imread(input_filename);
+    cv::VideoCapture cap(input_filename);
+    cv::Mat input_image;
 
     // Check that the image has been opened
-    if (!input_image.data) {
-        std::cout << "Error to read the image. Check ''cv::imread'' function of OpenCV" << std::endl;
+    if (!cap.isOpened()) {
+        std::cout << "File could not be loaded" << std::endl;
         return -1;
     }
-    // Check that the image read is a 3 channels image
-    CV_Assert(input_image.channels() == 3);
 
-
-    /*
-   * Conversion of the image in some specific color space
-   */
-
-    // Conversion of the rgb image in ihls color space
-    cv::Mat ihls_image;
-    colorconversion::convert_rgb_to_ihls(input_image, ihls_image);
-    // Conversion from RGB to logarithmic chromatic red and blue
-    std::vector< cv::Mat > log_image;
-    colorconversion::rgb_to_log_rb(input_image, log_image);
-
-    cv::imwrite("log.jpg", ihls_image);
-    /*
-   * Segmentation of the image using the previous transformation
-   */
-
-    // Segmentation of the IHLS and more precisely of the normalised hue channel
-    // ONE PARAMETER TO CONSIDER - COLOR OF THE TRAFFIC SIGN TO DETECT - RED VS BLUE
-    int nhs_mode = 0; // nhs_mode == 0 -> red segmentation / nhs_mode == 1 -> blue segmentation
-    cv::Mat nhs_image_seg_red;
-
-    segmentation::seg_norm_hue(ihls_image, nhs_image_seg_red, nhs_mode);
-    //nhs_mode = 1; // nhs_mode == 0 -> red segmentation / nhs_mode == 1 -> blue segmentation
-    //cv::Mat nhs_image_seg_blue;
-    cv::Mat nhs_image_seg_blue = nhs_image_seg_red.clone();
-    //segmentation::seg_norm_hue(ihls_image, nhs_image_seg_blue, nhs_mode);
-    // Segmentation of the log chromatic image
-    // TODO - DEFINE THE THRESHOLD FOR THE BLUE TRAFFIC SIGN. FOR NOW WE AVOID THE PROCESSING FOR BLUE SIGN AND LET ONLY THE OTHER METHOD TO TAKE CARE OF IT.
-    cv::Mat log_image_seg;
-    segmentation::seg_log_chromatic(log_image, log_image_seg);
-
-    /*
-   * Merging and filtering of the previous segmentation
-   */
-
-    // Merge the results of previous segmentation using an OR operator
-    // Pre-allocation of an image by cloning a previous image
-    cv::Mat merge_image_seg_with_red = nhs_image_seg_red.clone();
-    cv::Mat merge_image_seg = nhs_image_seg_blue.clone();
-    cv::bitwise_or(nhs_image_seg_red, log_image_seg, merge_image_seg_with_red);
-    cv::bitwise_or(nhs_image_seg_blue, merge_image_seg_with_red, merge_image_seg);
-
-    // Filter the image using median filtering and morpho math
-    cv::Mat bin_image;
-    imageprocessing::filter_image(merge_image_seg, bin_image);
-
-
-    cv::imwrite("seg.jpg", bin_image);
-
-    /*
-   * Extract candidates (i.e., contours) and remove inconsistent candidates
-   */
-   std::vector< std::vector< cv::Point > > contours;
-   imageprocessing::contours_extraction(bin_image, contours);
-
-    /*
-   * Correct the distortion for each contour
-   */
-
-    // Initialisation of the variables which will be returned after the distortion. These variables are linked with the transformation applied to correct the distortion
-    std::vector< cv::Mat > rotation_matrix(contours.size());
-    std::vector< cv::Mat > scaling_matrix(contours.size());
-    std::vector< cv::Mat > translation_matrix(contours.size());
-    for (unsigned int contour_idx = 0; contour_idx < contours.size(); contour_idx++) {
-        rotation_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
-        scaling_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
-        translation_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
-    }
-
-    // Correct the distortion
-    std::vector< std::vector< cv::Point2f > > undistorted_contours;
-    imageprocessing::correction_distortion(contours, undistorted_contours, translation_matrix, rotation_matrix, scaling_matrix);
-    // Normalise the contours to be inside a unit circle
-    std::vector<double> factor_vector(undistorted_contours.size());
-    std::vector< std::vector< cv::Point2f > > normalised_contours;
-    initopt::normalise_all_contours(undistorted_contours, normalised_contours, factor_vector);
-    //std::vector< std::vector< cv::Point2f > > detected_signs_2f(normalised_contours.size());
-    //std::vector< std::vector< cv::Point > > detected_signs(normalised_contours.size());
-
-    // std::vector< cv::Vec4i > hierarchy;
-    // cv::findContours(bin_image, contours, hierarchy,
-    //   CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
-
-    std::vector< cv::Point > approx;
-    cv::Mat output_image = input_image.clone();
-    cv::Scalar color(0,255,0);
-    for (unsigned int i = 0; i < contours.size(); i++){
-      cv::approxPolyDP(cv::Mat(contours[i]), approx,
-       cv::arcLength(cv::Mat(contours[i]), true) * 0.01, true);
-
-      if (approx.size() == 8){
-        std::cout << "STOP SIGN" << std::endl;
-        cv::drawContours(output_image, cv::Mat(contours[i]), -1, color, 2, 8);
-      } else if (approx.size() == 3){
-        std::cout << "TRIANGLE SIGN" << std::endl;
-        cv::drawContours(output_image, cv::Mat(contours[i]), -1, color, 2, 8);
-      } else {
-        std::cout << "OTHER TYPES OF SIGNS" << std::endl;
-        std::cout << "EDGES: " << approx.size() << std::endl;
-        cv::drawContours(output_image, cv::Mat(contours[i]), -1, color, 2, 8);
+    std::vector< shapeTracker > current_corners;
+    std::vector< shapeTracker > prev_corners;
+    std::vector< std::vector< cv::Point > > contoursToDraw;
+    std::vector< std::vector< cv::Point > > temp_contours;
+    std::vector< std::vector< cv::Point > > contours;
+    while(true){
+      // Check that the image read is a 3 channels image
+      cap >> input_image;
+      if (input_image.data == NULL){
+        break;
       }
-    }
+      CV_Assert(input_image.channels() == 3);
 
-    cv::namedWindow("Window", CV_WINDOW_AUTOSIZE);
-    cv::imshow("Window", output_image);
-    cv::waitKey(0);
 
-    /*
-    // For each contours
-    for (unsigned int contour_idx = 0; contour_idx < normalised_contours.size(); contour_idx++) {
-
-        Timer tmr("for each contours");
-        // For each type of traffic sign
-        /*
-     * sign_type = 0 -> nb_edges = 3;  gielis_sym = 6; radius
-     * sign_type = 1 -> nb_edges = 4;  gielis_sym = 4; radius
-     * sign_type = 2 -> nb_edges = 12; gielis_sym = 4; radius
-     * sign_type = 3 -> nb_edges = 8;  gielis_sym = 8; radius
-     * sign_type = 4 -> nb_edges = 3;  gielis_sym = 6; radius / 2
+      /*
+     * Conversion of the image in some specific color space
      */
-     /*
-        Timer tmrSgnType("For signType");
-        optimisation::ConfigStruct_<double> final_config;
-        double best_fit = std::numeric_limits<double>::infinity();
-        //int type_sign_to_keep = 0;
-        for (int sign_type = 0; sign_type < 5; sign_type++) {
-            Timer tmrIteration(" for_signType_iter");
 
-            // Check the center mass for a contour
-            cv::Point2f mass_center = initopt::mass_center_discovery(input_image, translation_matrix[contour_idx],
-                                                                     rotation_matrix[contour_idx], scaling_matrix[contour_idx],
-                                                                     normalised_contours[contour_idx], factor_vector[contour_idx],
-                                                                     sign_type);
+     //Convert input image to HSV
+     cv::Mat hsv_image;
+     cv::cvtColor(input_image, hsv_image, cv::COLOR_BGR2HSV);
+     // Threshold the HSV image, keep only the red pixels
+     cv::Mat lower_red_hue_range;
+     cv::Mat upper_red_hue_range;
+     cv::inRange(hsv_image, cv::Scalar(0, 100, 100), cv::Scalar(10, 255, 255), lower_red_hue_range);
+     cv::inRange(hsv_image, cv::Scalar(160, 100, 100), cv::Scalar(179, 255, 255), upper_red_hue_range);
 
-            // Find the rotation offset
-            double rot_offset = initopt::rotation_offset(normalised_contours[contour_idx]);
 
-            // Declaration of the parameters of the gielis with the default parameters
-            optimisation::ConfigStruct_<double> contour_config;
-            // Set the number of symmetry
-            int gielis_symmetry = 0;
-            switch (sign_type) {
-            case 0:
-                gielis_symmetry = 6;
-                break;
-            case 1:
-                gielis_symmetry = 4;
-                break;
-            case 2:
-                gielis_symmetry = 4;
-                break;
-            case 3:
-                gielis_symmetry = 8;
-                break;
-            case 4:
-                gielis_symmetry = 6;
-                break;
-            }
-            contour_config.p = gielis_symmetry;
-            // Set the rotation matrix
-            contour_config.theta_offset = rot_offset;
-            // Set the mass center
-            contour_config.x_offset = mass_center.x;
-            contour_config.y_offset = mass_center.y;
 
-            Timer tmrOpt("\t for_signType_gielisOptimization");
-            // Go for the optimisation
-            Eigen::Vector4d mean_err(0,0,0,0), std_err(0,0,0,0);
-            optimisation::gielis_optimisation(normalised_contours[contour_idx], contour_config, mean_err, std_err);
+     // Combine the above two images
+     cv::Mat red_hue_image;
+     cv::addWeighted(lower_red_hue_range, 1.0, upper_red_hue_range, 1.0, 0.0, red_hue_image);
 
-            mean_err = mean_err.cwiseAbs();
-            double err_fit = mean_err.sum();
+      // Filter the image using median filtering and morpho math
+      cv::Mat bin_image;
+      imageprocessing::filter_image(red_hue_image, bin_image);
 
-            if (err_fit < best_fit) {
-                best_fit = err_fit;
-                final_config = contour_config;
-                //type_sign_to_keep = sign_type;
-            }
+      cv::GaussianBlur(bin_image, bin_image, cv::Size(9, 9), 0, 0);
+      /*
+     * Extract candidates (i.e., contours) and remove inconsistent candidates
+     */
+     imageprocessing::contours_extraction(bin_image, contours);
+
+
+      // Initialisation of the variables which will be returned after the distortion. These variables are linked with the transformation applied to correct the distortion
+      std::vector< cv::Mat > rotation_matrix(contours.size());
+      std::vector< cv::Mat > scaling_matrix(contours.size());
+      std::vector< cv::Mat > translation_matrix(contours.size());
+      for (unsigned int contour_idx = 0; contour_idx < contours.size(); contour_idx++) {
+          rotation_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
+          scaling_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
+          translation_matrix[contour_idx] = cv::Mat::eye(3, 3, CV_32F);
+      }
+
+      std::vector< cv::Point > approx;
+      cv::Mat output_image = input_image.clone();
+      cv::Scalar color(255,255,0);
+      for (unsigned int i = 0; i < contours.size(); i++){
+        cv::approxPolyDP(cv::Mat(contours[i]), approx,
+         cv::arcLength(cv::Mat(contours[i]), true) * 0.01, true);
+
+        std::vector< cv::Point > tempStore;
+        int minx = 0;
+        int miny = 0;
+        int maxx = 0;
+        int maxy = 0;
+        for (int x = 0; x < approx.size(); x++){
+          if (approx.size() > 1 && x == 0){
+            minx = std::min(approx[x].x, approx[x+1].x);
+            miny = std::min(approx[x].y, approx[x+1].y);
+            maxx = std::max(approx[x].x, approx[x+1].x);
+            maxy = std::max(approx[x].y, approx[x+1].y);
+            continue;
+          }
+
+          minx = std::min(approx[x].x, minx);
+          miny = std::min(approx[x].y, miny);
+          maxx = std::max(approx[x].x, maxx);
+          maxy = std::max(approx[x].y, maxy);
         }
 
-        Timer tmr2("Reconstruct contour");
+        cv::Point *point1 = new cv::Point(minx, miny);
+        cv::Point *point2 = new cv::Point(maxx, maxy);
+        tempStore.push_back(*point1);
+        tempStore.push_back(*point2);
+        shapeTracker *shapeTrack = new shapeTracker(tempStore, contours[i]);
+        current_corners.push_back(*shapeTrack);
 
-        // Reconstruct the contour
-        std::cout << "Contour #" << contour_idx << ":\n" << final_config << std::endl;
-        std::vector< cv::Point2f > gielis_contour;
-        int nb_points = 1000;
-        optimisation::gielis_reconstruction(final_config, gielis_contour, nb_points);
-        std::vector< cv::Point2f > denormalised_gielis_contour;
-        initopt::denormalise_contour(gielis_contour, denormalised_gielis_contour, factor_vector[contour_idx]);
-        std::vector< cv::Point2f > distorted_gielis_contour;
-        imageprocessing::inverse_transformation_contour(denormalised_gielis_contour, distorted_gielis_contour,
-                                                        translation_matrix[contour_idx], rotation_matrix[contour_idx],
-                                                        scaling_matrix[contour_idx]);
+      }
 
-        // Transform to cv::Point to show the results
-        std::vector< cv::Point > distorted_gielis_contour_int(distorted_gielis_contour.size());
-        for (unsigned int i = 0; i < distorted_gielis_contour.size(); i++) {
-            distorted_gielis_contour_int[i].x = (int) std::round(distorted_gielis_contour[i].x);
-            distorted_gielis_contour_int[i].y = (int) std::round(distorted_gielis_contour[i].y);
+      // Filtering
+      for (int i = 0; i < prev_corners.size(); i++){
+        for (int j = 0; j < current_corners.size(); j++){
+
+          shapeTracker& shape = current_corners[j];
+          shapeTracker& prevShape = prev_corners[i];
+          if (shape == prevShape) {
+            shape.setIncrementedCounter(prevShape.getCount());
+            prev_corners.erase(prev_corners.begin() + i);
+            i--;
+            if (shape.getCount() >= 20) {
+              contoursToDraw.push_back(shape.getContour());
+              if (shape.getCount() < 21) {
+                std::cout << "STOP SIGN DETECTED" << std::endl;
+              }
+              break;
+            }
+
+            break;
+
+          }
+
         }
+      }
 
-        detected_signs_2f[contour_idx] = distorted_gielis_contour;
-        detected_signs[contour_idx] = distorted_gielis_contour_int;
 
+      for (int i = 0; i < contoursToDraw.size(); i++){
+        std::vector< cv::Point > approxPoints;
+        cv::approxPolyDP(cv::Mat(contoursToDraw[i]), approxPoints,
+         cv::arcLength(cv::Mat(contoursToDraw[i]), true) * 0.01, true);
+
+
+         cv::drawContours(output_image, cv::Mat(contoursToDraw[i]), -1, color, 2, 8);
+        /*
+        if (approxPoints.size() == 8){
+          std::cout << "STOP SIGN" << std::endl;
+        } else if (approxPoints.size() == 3){
+          std::cout << "TRIANGLE SIGN" << std::endl;
+          cv::drawContours(output_image, cv::Mat(contoursToDraw[i]), -1, color, 2, 8);
+        } else {
+          //std::cout << "OTHER TYPES OF SIGNS" << std::endl;
+          //std::cout << "EDGES: " << approx.size() << std::endl;
+          //cv::drawContours(output_image, cv::Mat(contours[i]), -1, color, 2, 8);
+        }
+        */
+        contoursToDraw.erase(contoursToDraw.begin() + i);
+      }
+
+      prev_corners = current_corners;
+      current_corners.clear();
+      cv::imshow("Window", output_image);
+      cv::waitKey(10);
     }
-
-    end = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end-start;
-    std::time_t end_time = std::chrono::system_clock::to_time_t(end);
-
-    std::cout << "Finished computation at " << std::ctime(&end_time)
-              << "Elapsed time: " << elapsed_seconds.count()*1000 << " ms\n";
-
-
-    cv::Mat output_image = input_image.clone();
-    cv::Scalar color(0,255,0);
-    cv::drawContours(output_image, detected_signs, -1, color, 2, 8);
-
-    cv::namedWindow("Window", CV_WINDOW_AUTOSIZE);
-    cv::imshow("Window", output_image);
     cv::waitKey(0);
 
-    return 0;
-    */
 }
