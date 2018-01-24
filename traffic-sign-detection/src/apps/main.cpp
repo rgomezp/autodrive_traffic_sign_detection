@@ -106,34 +106,75 @@ struct shapeTracker{
     cv::Point prevPoint = rhs.edges[0];
     cv::Point prevPoint1 = rhs.edges[1];
 
+    prevPoint.x = prevPoint.x - 10;
+    prevPoint.y = prevPoint.y - 10;
+    prevPoint1.x = prevPoint1.x + 10;
+    prevPoint1.y = prevPoint1.y + 10;
+
 
     //std::cout << "(" << currPoint.x << "," << currPoint.y << ")" << std::endl;
     //std::cout << "(" << currPoint1.x << "," << currPoint1.y << ")" << std::endl;
     //std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
     //std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
 
+    /*
+    std::cout << "SHAPE COMPARISON" << std::endl;
+    std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
+    std::cout << "(" << prevPoint.x << "," << prevPoint1.y << ")" << std::endl;
+    std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
+    std::cout << "(" << prevPoint1.x << "," << prevPoint.y << ")" << std::endl;
+    std::cout << "(" << currPoint.x << "," << currPoint.y << ")" << std::endl;
+    std::cout << "(" << currPoint.x << "," << currPoint1.y << ")" << std::endl;
+    std::cout << "(" << currPoint1.x << "," << currPoint1.y << ")" << std::endl;
+    std::cout << "(" << currPoint1.x << "," << currPoint.y << ")" << std::endl;
+    */
+
     if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
       if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
-        //std::cout << "COMPARISON PASSED" << std::endl;
-        incrementCounter();
+        /*
+        std::cout << "COMPARISON PASSED" << std::endl;
+        std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
+        std::cout << "(" << prevPoint.x << "," << prevPoint1.y << ")" << std::endl;
+        std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
+        std::cout << "(" << prevPoint1.x << "," << prevPoint.y << ")" << std::endl;
+        std::cout << "(" << currPoint.x << "," << currPoint.y << ")" << std::endl;
+        */
         return true;
       }
     } else if (currPoint1.x > prevPoint.x && currPoint1.x < prevPoint1.x){
       if (currPoint1.y > prevPoint.y && currPoint1.y < prevPoint1.y){
-        //std::cout << "COMPARISON PASSED" << std::endl;
-        incrementCounter();
+        /*
+        std::cout << "COMPARISON PASSED" << std::endl;
+        std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
+        std::cout << "(" << prevPoint.x << "," << prevPoint1.y << ")" << std::endl;
+        std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
+        std::cout << "(" << prevPoint1.x << "," << prevPoint.y << ")" << std::endl;
+        std::cout << "(" << currPoint1.x << "," << currPoint1.y << ")" << std::endl;
+        */
         return true;
       }
     } else if (currPoint.x > prevPoint.x && currPoint.x < prevPoint1.x){
       if (currPoint1.y > prevPoint.y && currPoint1.y < prevPoint1.y){
-        //std::cout << "COMPARISON PASSED" << std::endl;
-        incrementCounter();
+        /*
+        std::cout << "COMPARISON PASSED" << std::endl;
+        std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
+        std::cout << "(" << prevPoint.x << "," << prevPoint1.y << ")" << std::endl;
+        std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
+        std::cout << "(" << prevPoint1.x << "," << prevPoint.y << ")" << std::endl;
+        std::cout << "(" << currPoint.x << "," << currPoint1.y << ")" << std::endl;
+        */
         return true;
       }
     } else if (currPoint1.x > prevPoint.x && currPoint1.x < prevPoint1.x){
       if (currPoint.y > prevPoint.y && currPoint.y < prevPoint1.y){
-        //std::cout << "COMPARISON PASSED" << std::endl;
-        incrementCounter();
+        /*
+        std::cout << "COMPARISON PASSED" << std::endl;
+        std::cout << "(" << prevPoint.x << "," << prevPoint.y << ")" << std::endl;
+        std::cout << "(" << prevPoint.x << "," << prevPoint1.y << ")" << std::endl;
+        std::cout << "(" << prevPoint1.x << "," << prevPoint1.y << ")" << std::endl;
+        std::cout << "(" << prevPoint1.x << "," << prevPoint.y << ")" << std::endl;
+        std::cout << "(" << currPoint1.x << "," << currPoint.y << ")" << std::endl;
+        */
         return true;
       }
     }
@@ -177,6 +218,8 @@ int main(int argc, char *argv[]) {
     std::vector< shapeTracker > current_corners;
     std::vector< shapeTracker > prev_corners;
     std::vector< std::vector< cv::Point > > contoursToDraw;
+    std::vector< std::vector< cv::Point > > temp_contours;
+    std::vector< std::vector< cv::Point > > contours;
     // int id = 0;
     while(true){
       // Check that the image read is a 3 channels image
@@ -214,14 +257,18 @@ int main(int argc, char *argv[]) {
       /*
      * Extract candidates (i.e., contours) and remove inconsistent candidates
      */
-     std::vector< std::vector< cv::Point > > contours;
 
-
-     cv::imshow("Red Filter", bin_image);
+     //contours
 
      //cv::imwrite("seg.jpg", bin_image);
-     imageprocessing::contours_extraction(bin_image, contours);
 
+     imageprocessing::contours_extraction(bin_image, contours);
+/*
+     for (int x = 0; x < temp_contours.size(); x++) {
+       contours.push_back(temp_contours[x]);
+     }
+     temp_contours = contours;
+*/
 
       // Initialisation of the variables which will be returned after the distortion. These variables are linked with the transformation applied to correct the distortion
       std::vector< cv::Mat > rotation_matrix(contours.size());
@@ -235,9 +282,8 @@ int main(int argc, char *argv[]) {
 
       std::vector< cv::Point > approx;
       cv::Mat output_image = input_image.clone();
-      cv::Scalar color(0,255,0);
+      cv::Scalar color(255,255,0);
       for (unsigned int i = 0; i < contours.size(); i++){
-        cv::drawContours(upper_red_hue_range, contours, -1, color, 2, 8);
         cv::approxPolyDP(cv::Mat(contours[i]), approx,
          cv::arcLength(cv::Mat(contours[i]), true) * 0.01, true);
         //Display points to terminal
@@ -277,21 +323,29 @@ int main(int argc, char *argv[]) {
 
       }
 
+      for (int i = 0; i < prev_corners.size(); i++){
+        std::cout << "PREV: " << prev_corners[i].getCount() << std::endl;
+      }
+      for (int i = 0; i < current_corners.size(); i++){
+        std::cout << "CURR: " << current_corners[i].getCount() << std::endl;
+      }
+
       // Filtering
       for (int i = 0; i < prev_corners.size(); i++){
         for (int j = 0; j < current_corners.size(); j++){
 
-          shapeTracker shape = current_corners[j];
-          shapeTracker prevShape = prev_corners[i];
+          shapeTracker& shape = current_corners[j];
+          shapeTracker& prevShape = prev_corners[i];
           // std::cout << "COMPARISON:" << std::endl;
           if (shape == prevShape) {
-            current_corners[j].setIncrementedCounter(prevShape.getCount());
+            shape.setIncrementedCounter(prevShape.getCount());
             prev_corners.erase(prev_corners.begin() + i);
             i--;
             std::cout << "COUNT: " << shape.getCount() << std::endl;
-            if (shape.getCount() >= 1) {
+            if (shape.getCount() >= 20) {
               contoursToDraw.push_back(shape.getContour());
               std::cout << "WOOOHOOO" << std::endl;
+              //current_corners.erase(current_corners)
               break;
             }
 
@@ -325,13 +379,9 @@ int main(int argc, char *argv[]) {
         contoursToDraw.erase(contoursToDraw.begin() + i);
       }
 
-      // std::cout << "PREVIOUS: " << prev_corners.size() << std::endl;
-      // std::cout << "CURRENT: " << current_corners.size() << std::endl;
-
       prev_corners = current_corners;
       current_corners.clear();
       cv::imshow("Window", output_image);
-      cv::imshow("Red Filter With Contours", upper_red_hue_range);
       cv::waitKey(10);
     }
 
