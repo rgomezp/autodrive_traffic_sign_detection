@@ -1,4 +1,4 @@
-# Traffic Sign Detection
+# Traffic Sign Detection: Setup
 Real-time traffic sign detection using Gielis curves
 
 ## System & dependencies
