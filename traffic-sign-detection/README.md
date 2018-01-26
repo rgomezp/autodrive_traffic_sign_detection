@@ -70,4 +70,7 @@ The version available in Ubuntu 14.04 repositories is GTest 1.6.1
 
 * In order to run the code:
 
-`../bin/main ../test-images/different0035.jpg`
+`../bin/main ../test-videos/video01.avi`
+
+## Documentation
+
