@@ -8,4 +8,4 @@ Our program uses OpenCV to detect traffic signs within a stream. The algorithm w
 #### Jan 24 - 2018
 False positive rate has been reduced to near zero for all intents and purposes. While not 100% perfect, this minimum viable product can detect stop signs and yield sign with a high accuracy.
 
-![alt text](https://raw.githubusercontent.com/gomez-palacior/autodrive_traffic_sign_detection/screencapture.jpg)
+![Alt text](screencapture?raw=true "Title")
