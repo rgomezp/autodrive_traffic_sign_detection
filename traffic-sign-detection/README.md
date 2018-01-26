@@ -1,4 +1,4 @@
-# traffic-sign-detection
+# Traffic Sign Detection
 Real-time traffic sign detection using Gielis curves
 
 ## System & dependencies
@@ -72,5 +72,7 @@ The version available in Ubuntu 14.04 repositories is GTest 1.6.1
 
 `../bin/main ../test-videos/video01.avi`
 
-## Documentation
+# Autodrive Competition - Code Documentation
+main.cpp can be found in **src/apps/main.cpp**
+
 
