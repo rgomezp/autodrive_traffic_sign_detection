@@ -9,6 +9,9 @@ Main.cpp can be found in `traffic_sign_detection/src/apps/`
 #### Jan 24 - 2018
 False positive rate has been reduced to near zero for all intents and purposes. While not 100% perfect, this minimum viable product can detect stop signs with a high accuracy.
 
+#### March
+Working version has been tested in the car itself with great results
+
 ![Alt text](screencapture.png?raw=true "Title")
 =======
 # autodrive_traffic_sign_detection
